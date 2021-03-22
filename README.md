@@ -1,29 +1,34 @@
-# README #
+# Run Web site with BFS crawling capabilities
 
-This README would normally document whatever steps are necessary to get your application up and running.
+* Server
+    * WS JS
+    * Express JS
+* Client
+    * Vue
 
-### What is this repository for? ###
+## Requirements
 
-* Quick summary
-* Version
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+* [Node.js](https://nodejs.org/) (this sample tested with 10.x)
+* [Git](https://git-scm.com/downloads)
 
-### How do I get set up? ###
+## Get Code
 
-* Summary of set up
-* Configuration
-* Dependencies
-* Database configuration
-* How to run tests
-* Deployment instructions
+* Clone or download this [repository](https://github.com/talpasco/bfs-crawler)
+    * `git clone https://github.com/talpasco/bfs-crawler` 
+* `cd bfs-crawler` - move into directory just created
+* `npm install` to install dependencies
 
-### Contribution guidelines ###
+## Build website code
+ 
+* `npm run prebuild` to prep directories
+* `npm run build` to transpile typescript into javascript into `/dist` folder
 
-* Writing tests
-* Code review
-* Other guidelines
+## Run website code
 
-### Who do I talk to? ###
+* `npm run open` to open browser to http://localhost:3001
+* `npm run start`
 
-* Repo owner or admin
-* Other community or team contact
+
+## Run process over and over
+
+* `npm run start:all:again` - prebuilt, build, start, and open in browser
