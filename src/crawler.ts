@@ -20,19 +20,12 @@ const crawler = (function () {
     }
   }
 
-  //Start Application put here the adress where you want to start your crawling with
-  //second parameter is depth with 1 it will scrape all the links found on the first page but not the ones found on other pages
-  //if you put 2 it will scrape all links on first page and all links found on second level pages be careful with this on a huge website it will represent tons of pages to scrape
-  // it is recommanded to limit to 5 levels
-  //crawlBFS("https://www.scraping-bot.io/", 1);
-
   async function crawlBFS(socket, startURL, maxDepth = 5, maxPages = 15) {
     let session = {
-      seenLinks: {},
+      visitedList: {},
       rootNode: {},
       currentNode: {},
       linksQueue: [],
-      printList: [],
       crawledCount: 0,
       previousDepth: 0,
       maxCrawlingDepth: 5,
@@ -75,15 +68,8 @@ const crawler = (function () {
     return html;
   }
 
-  //The goal is to get the HTML and look for the links inside the page.
+  //Get the HTML raw text and fetch the links and titles.
   async function findLinks(session, linkObj) {
-    let linkMsg = JSON.stringify({
-      url: linkObj.url,
-      title: linkObj.title,
-      depth: linkObj.depth,
-      parent: linkObj.parent ? linkObj.parent.url : null,
-    });
-    session.ws.send(linkMsg);
     let response;
     try {
       response = await loadContent(linkObj.url);
@@ -126,18 +112,17 @@ const crawler = (function () {
         nextLinkObj.depth <= session.maxCrawlingDepth &&
         session.crawledCount <= session.maxCrawlingPages
       ) {
-        //next url scraping
+        //next url
         await findLinks(session, nextLinkObj);
       } else {
         setRootNode(session);
-        printTree(session.rootNode, session.printList, session.ws);
       }
     } catch (err) {
       console.log("Something Went Wrong...", err);
     }
   }
 
-  //Go all the way up and set RootNode to the parent node
+  //Set the index of RootNode to the parent node
   function setRootNode(session) {
     while (session.currentNode.parent != null) {
       session.currentNode = session.currentNode.parent;
@@ -145,25 +130,7 @@ const crawler = (function () {
     session.rootNode = session.currentNode;
   }
 
-  function printTree(rootNode, printList, ws) {
-    addToPrintDFS(rootNode, printList);
-    let res = { summary: printList.join("\n|") };
-    ws.send(JSON.stringify(res));
-  }
-
-  function addToPrintDFS(node, printList) {
-    let spaces = Array(node.depth * 3).join("-");
-    printList.push(spaces + node.url);
-    if (node.children) {
-      node.children.map(function (i, x) {
-        {
-          addToPrintDFS(i, printList);
-        }
-      });
-    }
-  }
-
-  //Check if the domain belongs to the root site
+  //Check if the domain is a part of the root site
   function checkDomain(linkURL, session) {
     let parsedUrl;
     let fullUrl = true;
@@ -182,7 +149,6 @@ const crawler = (function () {
           linkURL.split("#")[0]
         );
       } else if (linkURL.indexOf("#") === 0) {
-        //anchor avoid link
         return;
       } else {
         //relative url
@@ -190,11 +156,9 @@ const crawler = (function () {
         return path + linkURL;
       }
     }
-
     let mainHostDomain = parsedUrl.hostname;
 
     if (session.mainDomain == mainHostDomain) {
-      //console.log("returning Full Link: " + linkURL);
       parsedUrl.hash = "";
       return parsedUrl.href;
     } else {
@@ -203,34 +167,51 @@ const crawler = (function () {
   }
 
   function addToLinkQueue(linkobj, linksQueue, session) {
-    if (!linkInSeenListExists(session, linkobj)) {
+    if (!existInList(session, linkobj)) {
+      let resObj = Object.assign({}, linkobj);
       if (linkobj.parent != null) {
         linkobj.parent.children.push(linkobj);
+        resObj = Object.assign({}, linkobj.parent);
       }
       linksQueue.push(linkobj);
-      addToSeen(session, linkobj);
+      addToVisited(session, linkobj);
+      sendSocketMsg(resObj, session.ws);
     }
+  }
+
+  function sendSocketMsg(resObj, ws) {
+    //crawled URL links object parsing
+    let children = resObj.children.map((item) => {
+      return item.url;
+    });
+    let linkMsg = JSON.stringify({
+      url: resObj.url,
+      title: resObj.title,
+      depth: resObj.depth,
+      parent: resObj.parent ? resObj.parent.url : null,
+      children: children.length ? children : null,
+    });
+    console.log(linkMsg);
+    ws.send(linkMsg);
   }
 
   function getNextInQueue(session) {
     let nextLink = session.linksQueue.shift();
     if (nextLink && nextLink.depth > session.previousDepth) {
       session.previousDepth = nextLink.depth;
-      console.log(
-        `------- CRAWLING ON DEPTH LEVEL ${session.previousDepth} --------`
-      );
+      console.log(`--- CRAWLING DEPTH (${session.previousDepth}) ---`);
     }
     return nextLink;
   }
 
-  //Adds links we've visited to the seenList
-  function addToSeen(session, linkObj) {
-    session.seenLinks[linkObj.url] = linkObj;
+  //Mark the visited pages list
+  function addToVisited(session, linkObj) {
+    session.visitedList[linkObj.url] = linkObj;
   }
 
-  //Returns whether the link has been seen.
-  function linkInSeenListExists(session, linkObj) {
-    return session.seenLinks[linkObj.url] == null ? false : true;
+  //Page is visited.
+  function existInList(session, linkObj) {
+    return session.visitedList[linkObj.url] == null ? false : true;
   }
   return {
     crawlBFS: crawlBFS,

@@ -38,4 +38,4 @@
 * I was able to commit (commit 7fadb37) - Within 3 hectic days, and I'm not satisfied with what I had achieved, So every progress being made afterwardth isn't within the time frame.
 * Sticky sessions and PubSub - Using Redis-PubSub and Redis-Store, making sure the socket would stick to that specific server instance (within the thread or via load-balancer)
 * Store the results within a DB - using Redis, store the query and the results, and then, if there's a query with a deeper depth, to fetch only the depth that hasn't been reached yet.
-* UI - Right now it's kinda lame, so I'd like to build the hierarchy in 'Real-Time' within the client.
+* Unit Tests.

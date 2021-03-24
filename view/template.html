@@ -1,6 +1,5 @@
 <!-- template.html -->
 <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
-<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue"></script>
 
 <div class="container" id="app">
@@ -21,31 +20,29 @@
                     <input type="number" name="depth" id="depth" placeholder="depth" v-model="depth">
                     <label for="pages">Pages</label>
                     <input type="number" name="pages" id="pages" placeholder="pages" v-model="pages">
-                    <span class="glyphicon glyphicon-search form-control-feedback"></span>
+                    <span class="glyphicon glyphicon-search form-control-feedback" @click="search()"></span>
                 </div>
             </form>
         </div>
     </div>
     <br><br>
-    <div class="row" style="width: 50%;float:left">
-        <div>PROGRESS:</div>
+    <div class="row" style="width: 70%;float:left">
+        <div>RESULTS:</div>
         <ul v-for="result in results">
             <li>
-                <div>
-                    {{ result.title }}: {{ result.url }} (depth {{result.depth}})
-                </div>
+                {{ result.title }}: {{ result.url }} (depth {{result.depth}})
+                <ul v-for="link in result.children">
+                    <li v-if="link.url">
+                        {{ link.title }}: {{ link.url }} (depth {{link.depth}})
+                    </li>
+                    <li v-else>
+                        {{ link }}
+                    </li>
+                </ul>
             </li>
         </ul>
     </div>
-    <div class="row" style="width: 50%;float:left">
-        <div>SUMMARY:</div>
-        <ul v-for="item in summary">
-            <li>
-                <div>
-                    {{ item.summary }}
-                </div>
-            </li>
-        </ul>
+    <div class="row" style="width: 30%;float:left">
     </div>
     <div style="clear:both"></div>
 </div>
@@ -66,30 +63,6 @@
         box-shadow: none;
         display: block;
     }
-
-    .search-form .form-group input.form-control::-webkit-input-placeholder {
-        display: none;
-    }
-
-    .search-form .form-group input.form-control:-moz-placeholder {
-        /* Firefox 18- */
-        display: none;
-    }
-
-    .search-form .form-group input.form-control::-moz-placeholder {
-        /* Firefox 19+ */
-        display: none;
-    }
-
-    .search-form .form-group input.form-control:-ms-input-placeholder {
-        display: none;
-    }
-
-    /* .search-form .form-group:hover,
-    .search-form .form-group.hover {
-        width: 100%;
-        border-radius: 4px 25px 25px 4px;
-    } */
 
     .search-form .form-group span.form-control-feedback {
         position: absolute;
@@ -113,7 +86,6 @@
         // declare the data for the component (An array that houses the results and a query that holds the current search string)
         data: {
             results: [],
-            summary: [],
             query: '',
             depth: 5,
             pages: 15
@@ -122,12 +94,13 @@
         methods: {
             // make an axios request to the server with the current search query
             search: function () {
-                console.log(`client search query = ${JSON.stringify(this.query)}`)
-                axios.get("http://127.0.0.1:3001/search?q=" + this.query)
-                    .then(response => {
-                        console.log(`client search response = ${JSON.stringify(response)}`)
-                        this.results = response.data;
-                    })
+                this.results = [];
+                let qObj = {
+                    query: this.query,
+                    depth: this.depth,
+                    pages: this.pages
+                }
+                this.sendMessage(JSON.stringify(qObj));
             },
             sendMessage: function (message) {
                 this.connection.send(message);
@@ -140,10 +113,16 @@
 
             this.connection.onmessage = function (event) {
                 let res = JSON.parse(event.data);
-                if (res.title)
+                let i, j;
+                if ((i = vm.results.findIndex(e => e.url === res.url)) && i >= 0) { //in case the crawled url is somewhere between the links, so the crawled url replaces it
+                    vm.results[i] = res;
+                }
+                else if ((i = vm.results.findIndex(e => e.children && (j = e.children.indexOf(res.url)) >= 0)) && i >= 0) { //in case the crawled url is somewhere between the links, so the crawled url replaces it
+                    vm.results[i].children[j] = res;
+                }
+                else {
                     vm.results.push(res);
-                else if (res.summary)
-                    vm.summary.push(res);
+                }
             }
 
             this.connection.onopen = function (event) {
@@ -151,20 +130,12 @@
                 console.log("Successfully connected to the echo websocket server...")
             }
         },
-        // declare Vue watchers
-        watch: {
-            // watch for change in the query string and recall the search method
-            query: function () {
-                this.results = [];
-                this.summary = [];
-                let qObj = {
-                    query: this.query,
-                    depth: this.depth,
-                    pages: this.pages
+        mounted: function () {
+            window.addEventListener('keyup', function (event) {
+                if (event.keyCode === 13) {
+                    app.search();
                 }
-                this.sendMessage(JSON.stringify(qObj));
-            }
+            });
         }
-
     })
 </script>
