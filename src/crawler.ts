@@ -4,6 +4,7 @@ const crawler = (function () {
   const cheerio = require("cheerio");
   const { URL } = require("url");
   const puppeteer = require("puppeteer");
+  const stringify = require("fast-safe-stringify");
 
   class CreateLink {
     url: string;
@@ -171,7 +172,7 @@ const crawler = (function () {
       let resObj = Object.assign({}, linkobj);
       if (linkobj.parent != null) {
         linkobj.parent.children.push(linkobj);
-        resObj = Object.assign({}, linkobj.parent);
+        resObj = linkobj.parent;
       }
       linksQueue.push(linkobj);
       addToVisited(session, linkobj);
@@ -180,18 +181,17 @@ const crawler = (function () {
   }
 
   function sendSocketMsg(resObj, ws) {
-    //crawled URL links object parsing
-    let children = resObj.children.map((item) => {
-      return item.url;
-    });
-    let linkMsg = JSON.stringify({
+    let linkMsg = stringify({
       url: resObj.url,
       title: resObj.title,
       depth: resObj.depth,
-      parent: resObj.parent ? resObj.parent.url : null,
-      children: children.length ? children : null,
+      children: resObj.children.map(({ title, url, depth, children }) => ({
+        title,
+        url,
+        depth,
+        children,
+      })),
     });
-    console.log(linkMsg);
     ws.send(linkMsg);
   }
 
@@ -199,7 +199,10 @@ const crawler = (function () {
     let nextLink = session.linksQueue.shift();
     if (nextLink && nextLink.depth > session.previousDepth) {
       session.previousDepth = nextLink.depth;
-      console.log(`--- CRAWLING DEPTH (${session.previousDepth}) ---`);
+      let crawlDepth = JSON.stringify({
+        crawling_depth: session.previousDepth,
+      });
+      session.ws.send(crawlDepth);
     }
     return nextLink;
   }

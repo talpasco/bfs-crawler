@@ -12,41 +12,58 @@
         <div class="col-md-4 col-md-offset-3">
             <form action="" class="search-form">
                 <div class="form-group has-feedback">
-                    <label for="search" class="sr-only">Search</label>
-                    <input type="text" class="form-control" name="search" id="search" placeholder="search"
-                        v-model="query">
+                    <div class="search-group">
+                        <input type="text" class="form-control" name="search" id="search" placeholder="search"
+                            v-model="query">
+                        <span class="glyphicon glyphicon-search form-control-feedback" @click="search()"></span>
+                    </div>
                     <br>
-                    <label for="depth">Depth</label>
-                    <input type="number" name="depth" id="depth" placeholder="depth" v-model="depth">
-                    <label for="pages">Pages</label>
-                    <input type="number" name="pages" id="pages" placeholder="pages" v-model="pages">
-                    <span class="glyphicon glyphicon-search form-control-feedback" @click="search()"></span>
+                    <div class="search-group">
+                        <div>
+                            <label for="depth">Depth: </label>
+                            <input type="number" name="depth" id="depth" placeholder="depth" v-model="depth">
+                        </div>
+                        <div>
+                            <label style="margin-left: 3px;" for="pages">Pages: </label>
+                            <input type="number" name="pages" id="pages" placeholder="pages" v-model="pages">
+                        </div>
+                    </div>
                 </div>
             </form>
         </div>
     </div>
     <br><br>
-    <div class="row" style="width: 70%;float:left">
-        <div>RESULTS:</div>
+    <div id="resultView">
         <ul v-for="result in results">
             <li>
-                {{ result.title }}: {{ result.url }} (depth {{result.depth}})
-                <ul v-for="link in result.children">
-                    <li v-if="link.url">
-                        {{ link.title }}: {{ link.url }} (depth {{link.depth}})
-                    </li>
-                    <li v-else>
-                        {{ link }}
-                    </li>
-                </ul>
+                <tree-menu :nodes="result.children" :depth="0" :label="result.url"></tree-menu>
             </li>
         </ul>
     </div>
-    <div class="row" style="width: 30%;float:left">
-    </div>
-    <div style="clear:both"></div>
+
 </div>
 <style>
+    body {
+        font-family: "Open Sans", sans-serif;
+        font-size: 18px;
+        font-weight: 300;
+        line-height: 1em;
+    }
+
+    .container {
+        margin: 0 auto;
+    }
+
+    .label-wrapper {
+        padding-bottom: 10px;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #ccc;
+    }
+
+    .has-children {
+        cursor: pointer;
+    }
+
     .search-form .form-group {
         width: 40vw !important;
         border-radius: 4px 25px 25px 4px;
@@ -65,70 +82,136 @@
     }
 
     .search-form .form-group span.form-control-feedback {
-        position: absolute;
-        top: -1px;
-        right: -2px;
-        z-index: 2;
-        display: block;
         width: 34px;
         height: 34px;
         line-height: 34px;
         text-align: center;
         color: #3596e0;
-        left: initial;
         font-size: 14px;
+        position: relative !important;
+        display: inline-block !important;
+        pointer-events: all !important;
+        cursor: pointer !important;
+    }
+
+    .resHeader {
+        color: red;
+        font-size: 18px;
+        font-weight: bold;
+        text-align: center;
+    }
+
+    .search-group {
+        display: flex;
+        align-items: center;
+    }
+
+    #resultView {
+        margin-top: 2em;
+        width: 100%;
     }
 </style>
 <script>
-    // create a new Vue instance
-    var app = new Vue({
+    Vue.component('tree-menu', {
+        template: '#tree-menu',
+        props: ['nodes', 'label', 'depth'],
+        data() {
+            return {
+                showChildren: true
+            }
+        },
+        computed: {
+            iconClasses() {
+                return {
+                    'fa-plus-square-o': !this.showChildren,
+                    'fa-minus-square-o': this.showChildren
+                }
+            },
+            labelClasses() {
+                return { 'has-children': this.nodes }
+            },
+            indent() {
+                return { transform: `translate(${this.depth * 50}px)` }
+            }
+        },
+        methods: {
+            toggleChildren() {
+                //this.showChildren = !this.showChildren;
+            }
+        }
+    });
+
+    let app = new Vue({
         el: '#app',
         // declare the data for the component (An array that houses the results and a query that holds the current search string)
         data: {
             results: [],
             query: '',
             depth: 5,
-            pages: 15
+            pages: 15,
+            connected: false
         },
         // declare methods in this Vue component. here only one method which performs the search is defined
         methods: {
             // make an axios request to the server with the current search query
             search: function () {
-                this.results = [];
-                let qObj = {
-                    query: this.query,
-                    depth: this.depth,
-                    pages: this.pages
+                let vm = this;
+                if (!this.connected) {
+                    this.socketSubscribe();
+                    setTimeout(function () {
+                        vm.search();
+                    }, 3000);
                 }
-                this.sendMessage(JSON.stringify(qObj));
+                else {
+                    this.results = [];
+                    document.getElementById('resultView').innerHTML = `<div class='resHeader'> ------------------------------ CRAWLING DEPTH (0) ------------------------------ </div>`;
+                    let qObj = {
+                        query: this.query,
+                        depth: this.depth,
+                        pages: this.pages
+                    }
+                    this.sendMessage(JSON.stringify(qObj));
+                }
             },
             sendMessage: function (message) {
                 this.connection.send(message);
+            },
+            socketSubscribe: function () {
+                let vm = this;
+                console.log("Starting connection to WebSocket Server")
+                this.connection = new WebSocket(`ws://127.0.0.1:3001?uid=${window.location.host}`)
+
+                this.connection.onmessage = function (event) {
+                    let res = JSON.parse(event.data);
+                    if (res.crawling_depth) {
+                        document.getElementById('resultView').innerHTML += `<div class='resHeader'> ------------------------------ CRAWLING DEPTH (${res.crawling_depth}) ------------------------------ </div>`;
+                    }
+                    else {
+                        let i = vm.results.findIndex(e => res && res.url && e.url === res.url);
+                        if (i >= 0) {
+                            vm.results[i].children = res.children;
+                        }
+                        else {
+                            vm.results.push(res);
+                        }
+                    }
+                }
+
+                this.connection.onopen = function (event) {
+                    console.log(event);
+                    console.log("Successfully connected to the echo websocket server...");
+                    vm.connected = true;
+                }
+
+                this.connection.onclose = function (event) {
+                    console.log(event);
+                    console.log("Disconnected from websocket server...");
+                    vm.connected = false;
+                }
             }
         },
         created: function () {
-            let vm = this;
-            console.log("Starting connection to WebSocket Server")
-            this.connection = new WebSocket(`ws://127.0.0.1:3001?uid=${window.location.host}`)
-
-            this.connection.onmessage = function (event) {
-                let res = JSON.parse(event.data);
-                let i, j;
-                if ((i = vm.results.findIndex(e => e.url === res.url)) && i >= 0) { //in case the crawled url is somewhere between the links, so the crawled url replaces it
-                    vm.results[i] = res;
-                }
-                else if ((i = vm.results.findIndex(e => e.children && (j = e.children.indexOf(res.url)) >= 0)) && i >= 0) { //in case the crawled url is somewhere between the links, so the crawled url replaces it
-                    vm.results[i].children[j] = res;
-                }
-                else {
-                    vm.results.push(res);
-                }
-            }
-
-            this.connection.onopen = function (event) {
-                console.log(event)
-                console.log("Successfully connected to the echo websocket server...")
-            }
+            this.socketSubscribe();
         },
         mounted: function () {
             window.addEventListener('keyup', function (event) {
@@ -139,3 +222,22 @@
         }
     })
 </script>
+
+<script type="text/x-template" id="tree-menu">
+    <div class="tree-menu">
+      <div class="label-wrapper" @click="toggleChildren">
+        <div :style="indent" :class="labelClasses">
+          <i v-if="nodes" class="fa" :class="iconClasses"></i>
+          {{ label }}
+        </div>
+      </div>
+      <tree-menu 
+        v-if="showChildren"
+        v-for="node in nodes" 
+        :nodes="node.nodes" 
+        :label="node.url + ' (' + node.title + ')'"
+        :depth="depth + 1"   
+      >
+      </tree-menu>
+    </div>
+  </script>

@@ -31,6 +31,27 @@ app.use(function (req, res, next) {
   next();
 });
 
+//TODO: Add session-store to keep the socket session sticy
+// app.middleware('session:before', require('cookie-parser')(app.get('cookieSecret')));
+// const session = require('express-session');
+// const redis = require('redis');
+// const RedisStore = require('connect-redis')(session);
+// const socketManagerModel = app.models.socketManager;
+// const RedisClient = redis.createClient({ host: socketManagerModel.redisDB.host, port: socketManagerModel.redisDB.port });
+// let sessionStore = new RedisStore({ client: RedisClient });
+// let sessionObj = session({
+//   store: sessionStore,
+//   secret: 'K6Wd%8*8x75G',
+//   saveUninitialized: true,
+//   resave: true,
+//   cookie: {
+//     signed: true,
+//     maxAge: 61320000
+//   }
+// });
+// app.middleware('session', sessionObj);
+// app.use(sessionObj);
+
 // defined the base route and return with an HTML file called tempate.html
 app.get("/", function (req, res) {
   res.sendFile("template.html", {
