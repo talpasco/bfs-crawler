@@ -1,0 +1,45 @@
+{
+    "name": "crawl_history",
+    "base": "PersistedModel",
+    "idInjection": false,
+    "indexes": {
+        "UNIQUE_INDEX": {
+            "columns": "url",
+            "kind": "unique"
+        }
+    },
+    "options": {
+        "validateUpsert": true
+    },
+    "properties": {
+        "url": {
+            "type": "string",
+            "id": true
+        },
+        "title": {
+            "type": "string"
+        },
+        "depth": {
+            "type": "number",
+            "dataType": "int"
+        },
+        "children": {
+            "type": "array"
+        },
+        "createTime": {
+            "type": "Date",
+            "defaultFn": "now"
+        }
+    },
+    "validations": [],
+    "relations": {},
+    "acls": [
+        {
+            "accessType": "*",
+            "principalType": "ROLE",
+            "principalId": "$everyone",
+            "permission": "ALLOW"
+        }
+    ],
+    "methods": {}
+}

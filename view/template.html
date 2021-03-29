@@ -1,6 +1,7 @@
 <!-- template.html -->
 <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
 <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
 <div class="container" id="app">
     <div class="row">
@@ -26,6 +27,11 @@
                         <div>
                             <label style="margin-left: 3px;" for="pages">Pages: </label>
                             <input type="number" name="pages" id="pages" placeholder="pages" v-model="pages">
+                        </div>
+                        <div>
+                            <label style="margin-left: 3px;" for="updateReport">Update-Report: </label>
+                            <input type="checkbox" name="updateReport" id="updateReport" placeholder="updateReport"
+                                v-model="updateReport">
                         </div>
                     </div>
                 </div>
@@ -149,6 +155,7 @@
             query: '',
             depth: 5,
             pages: 15,
+            updateReport: true,
             connected: false
         },
         // declare methods in this Vue component. here only one method which performs the search is defined
@@ -156,21 +163,32 @@
             // make an axios request to the server with the current search query
             search: function () {
                 let vm = this;
-                if (!this.connected) {
-                    this.socketSubscribe();
-                    setTimeout(function () {
-                        vm.search();
-                    }, 3000);
+                if (!this.updateReport) {
+                    this.results = [];
+                    axios.get('http://localhost:3001/api/crawl_histories/' + encodeURIComponent(this.query)).then(resp => {
+                        document.getElementById('resultView').innerHTML = `<div class='resHeader'> ------------------------------ CRAWLING DEPTH (0) ------------------------------ </div>`;
+                        vm.results = [resp.data];
+                    }).catch(error => {
+                        document.getElementById('resultView').innerHTML = `<div class='resHeader'> ------------- No results, please check 'Update-Query' checkbox -------------</div>`;
+                    })
                 }
                 else {
-                    this.results = [];
-                    document.getElementById('resultView').innerHTML = `<div class='resHeader'> ------------------------------ CRAWLING DEPTH (0) ------------------------------ </div>`;
-                    let qObj = {
-                        query: this.query,
-                        depth: this.depth,
-                        pages: this.pages
+                    if (!this.connected) {
+                        this.socketSubscribe();
+                        setTimeout(function () {
+                            vm.search();
+                        }, 3000);
                     }
-                    this.sendMessage(JSON.stringify(qObj));
+                    else {
+                        this.results = [];
+                        document.getElementById('resultView').innerHTML = `<div class='resHeader'> ------------------------------ CRAWLING DEPTH (0) ------------------------------ </div>`;
+                        let qObj = {
+                            query: this.query,
+                            depth: this.depth,
+                            pages: this.pages
+                        }
+                        this.sendMessage(JSON.stringify(qObj));
+                    }
                 }
             },
             sendMessage: function (message) {

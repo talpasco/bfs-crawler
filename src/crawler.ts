@@ -5,6 +5,7 @@ const crawler = (function () {
   const { URL } = require("url");
   const puppeteer = require("puppeteer");
   const stringify = require("fast-safe-stringify");
+  const app = require("./server.js");
 
   class CreateLink {
     url: string;
@@ -176,12 +177,12 @@ const crawler = (function () {
       }
       linksQueue.push(linkobj);
       addToVisited(session, linkobj);
-      sendSocketMsg(resObj, session.ws);
+      propegateMsg(resObj, session.ws);
     }
   }
 
-  function sendSocketMsg(resObj, ws) {
-    let linkMsg = stringify({
+  function propegateMsg(resObj, ws) {
+    let msgObj = {
       url: resObj.url,
       title: resObj.title,
       depth: resObj.depth,
@@ -191,7 +192,9 @@ const crawler = (function () {
         depth,
         children,
       })),
-    });
+    };
+    let linkMsg = stringify(msgObj);
+    app.models.crawl_history.upsert(msgObj);
     ws.send(linkMsg);
   }
 

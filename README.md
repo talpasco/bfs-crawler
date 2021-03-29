@@ -10,6 +10,9 @@
 
 * [Node.js](https://nodejs.org/) (this sample tested with 10.x)
 * [Git](https://git-scm.com/downloads)
+* REDIS: 
+    - Windows: https://redislabs.com/ebook/appendix-a/a-3-installing-on-windows/a-3-2-installing-redis-on-window/
+    - Linux: https://redis.io/topics/quickstart
 
 ## Get Code
 
@@ -33,9 +36,14 @@
 
 * `npm run start:all:again` - prebuilt, build, start, and open in browser
 
+## API Explorer
+
+* Added the crawler API, to search/post through crawling history (And a fulll CRUD functionality - Strongloop API) : http://localhost:3001/explorer/#/
+
 ## TODOS:
 
 * I was able to commit (commit 7fadb37) - Within 3 hectic days, and I'm not satisfied with what I had achieved, So every progress being made afterwardth isn't within the time frame.
 * Sticky sessions and PubSub - Using Redis-PubSub and Redis-Store, making sure the socket would stick to that specific server instance (within the thread or via load-balancer)
 * Store the results within a DB - using Redis, store the query and the results, and then, if there's a query with a deeper depth, to fetch only the depth that hasn't been reached yet.
 * Unit Tests.
+* Split the teplate.html file into html, scss , js and veu files
