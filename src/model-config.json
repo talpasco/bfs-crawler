@@ -13,29 +13,7 @@
       "./mixins"
     ]
   },
-  "User": {
-    "dataSource": "memDB"
-  },
-  "AccessToken": {
-    "dataSource": "memDB",
-    "public": false
-  },
-  "ACL": {
-    "dataSource": "memDB",
-    "public": false
-  },
-  "RoleMapping": {
-    "dataSource": "memDB",
-    "public": false,
-    "options": {
-      "strictObjectIDCoercion": true
-    }
-  },
-  "Role": {
-    "dataSource": "memDB",
-    "public": false
-  },
   "crawl_history": {
-    "dataSource": "memDB"
+    "dataSource": "crawl_db"
   }
 }

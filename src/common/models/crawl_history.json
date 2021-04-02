@@ -1,13 +1,7 @@
 {
     "name": "crawl_history",
-    "base": "PersistedModel",
+    "base": "KeyValueModel",
     "idInjection": false,
-    "indexes": {
-        "UNIQUE_INDEX": {
-            "columns": "url",
-            "kind": "unique"
-        }
-    },
     "options": {
         "validateUpsert": true
     },
@@ -32,14 +26,5 @@
         }
     },
     "validations": [],
-    "relations": {},
-    "acls": [
-        {
-            "accessType": "*",
-            "principalType": "ROLE",
-            "principalId": "$everyone",
-            "permission": "ALLOW"
-        }
-    ],
     "methods": {}
 }

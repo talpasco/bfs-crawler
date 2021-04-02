@@ -45,7 +45,6 @@ app.middleware(
   "session:before",
   require("cookie-parser")(app.get("cookieSecret"))
 );
-const socketManagerModel = app.models.socketManager;
 const RedisClient = redis.createClient({
   host: redisDB.host,
   port: redisDB.port,
@@ -69,10 +68,6 @@ app.get("/", function (req, res) {
   res.sendFile("template.html", {
     root: path.join(__dirname, "view"),
   });
-});
-
-app.get("/search", function (req, res) {
-  let links = crawlBFS(req.query["q"], 5, 15);
 });
 
 app.webStart = function (httpOnly) {

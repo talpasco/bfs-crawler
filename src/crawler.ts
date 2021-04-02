@@ -28,6 +28,7 @@ const crawler = (function () {
       rootNode: {},
       currentNode: {},
       linksQueue: [],
+      printQueue: [],
       crawledCount: 0,
       previousDepth: 0,
       maxCrawlingDepth: 5,
@@ -177,11 +178,16 @@ const crawler = (function () {
       }
       linksQueue.push(linkobj);
       addToVisited(session, linkobj);
-      propegateMsg(resObj, session.ws);
+      propegateMsg(
+        resObj,
+        session.mainParsedUrl.origin,
+        session.printQueue,
+        session.ws
+      );
     }
   }
 
-  function propegateMsg(resObj, ws) {
+  function propegateMsg(resObj, mainDomain, printQueue, ws) {
     let msgObj = {
       url: resObj.url,
       title: resObj.title,
@@ -193,9 +199,10 @@ const crawler = (function () {
         children,
       })),
     };
-    let linkMsg = stringify(msgObj);
-    app.models.crawl_history.upsert(msgObj);
-    ws.send(linkMsg);
+    let msgSTR = stringify(msgObj);
+    printQueue.push(msgSTR);
+    app.models.crawl_history.set(mainDomain, printQueue);
+    ws.send(msgSTR);
   }
 
   function getNextInQueue(session) {

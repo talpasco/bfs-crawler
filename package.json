@@ -39,7 +39,7 @@
     "loopback": "^3.28.0",
     "loopback-boot": "^3.3.1",
     "loopback-component-explorer": "^6.5.1",
-    "loopback-connector-redis": "^3.0.0",
+    "loopback-connector-kv-redis": "^4.0.0",
     "make-dir": "^3.1.0",
     "prettier": "^2.0.5",
     "puppeteer": "^8.0.0",

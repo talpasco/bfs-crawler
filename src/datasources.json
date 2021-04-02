@@ -1,6 +1,8 @@
 {
-  "memDB": {
-    "name": "memDB",
-    "connector": "memory"
+  "crawl_db": {
+    "host": "127.0.0.1",
+    "port": 6379,
+    "name": "crawl_db",
+    "connector": "kv-redis"
   }
 }
