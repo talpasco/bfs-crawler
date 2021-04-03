@@ -167,7 +167,9 @@
                     this.results = [];
                     axios.get('http://localhost:3001/api/crawl_histories/' + encodeURIComponent(this.query)).then(resp => {
                         document.getElementById('resultView').innerHTML = `<div class='resHeader'> ------------------------------ CRAWLING DEPTH (0) ------------------------------ </div>`;
-                        vm.results = [resp.data];
+                        resp.data.forEach((x) => {
+                            vm.populateTree(vm.results, JSON.parse(x));
+                        })
                     }).catch(error => {
                         document.getElementById('resultView').innerHTML = `<div class='resHeader'> ------------- No results, please check 'Update-Query' checkbox -------------</div>`;
                     })
@@ -194,6 +196,15 @@
             sendMessage: function (message) {
                 this.connection.send(message);
             },
+            populateTree: function (results, data) {
+                let i = results.findIndex(e => data && data.url && e.url === data.url);
+                if (i >= 0) {
+                    results[i].children = data.children;
+                }
+                else {
+                    results.push(data);
+                }
+            },
             socketSubscribe: function () {
                 let vm = this;
                 console.log("Starting connection to WebSocket Server")
@@ -205,13 +216,7 @@
                         document.getElementById('resultView').innerHTML += `<div class='resHeader'> ------------------------------ CRAWLING DEPTH (${res.crawling_depth}) ------------------------------ </div>`;
                     }
                     else {
-                        let i = vm.results.findIndex(e => res && res.url && e.url === res.url);
-                        if (i >= 0) {
-                            vm.results[i].children = res.children;
-                        }
-                        else {
-                            vm.results.push(res);
-                        }
+                        vm.populateTree(vm.results, res);
                     }
                 }
 
