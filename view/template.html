@@ -42,7 +42,7 @@
     <div id="resultView">
         <ul v-for="result in results">
             <li>
-                <tree-menu :nodes="result.children" :depth="0" :label="result.url"></tree-menu>
+                <tree-menu :nodes="result.children" :depth="0" :label="result.url + ' (' + result.title + ')'"></tree-menu>
             </li>
         </ul>
     </div>
@@ -166,9 +166,14 @@
                 if (!this.updateReport) {
                     this.results = [];
                     axios.get('http://localhost:3001/api/crawl_histories/' + encodeURIComponent(this.query)).then(resp => {
-                        document.getElementById('resultView').innerHTML = `<div class='resHeader'> ------------------------------ CRAWLING DEPTH (0) ------------------------------ </div>`;
+                        let curDepth = 0;
                         resp.data.forEach((x) => {
-                            vm.populateTree(vm.results, JSON.parse(x));
+                            let res = JSON.parse(x);
+                            if (res.depth > curDepth) {
+                                document.getElementById('resultView').innerHTML = `<div class='resHeader'> ------------------------------ CRAWLING DEPTH (${curDepth}) ------------------------------ </div>`;
+                                curDepth = res.depth;
+                            }
+                            vm.populateTree(vm.results, res);
                         })
                     }).catch(error => {
                         document.getElementById('resultView').innerHTML = `<div class='resHeader'> ------------- No results, please check 'Update-Query' checkbox -------------</div>`;
@@ -258,7 +263,7 @@
         v-if="showChildren"
         v-for="node in nodes" 
         :nodes="node.nodes" 
-        :label="node.url + ' (' + node.title + ')'"
+        :label="node.url"
         :depth="depth + 1"   
       >
       </tree-menu>
