@@ -12,13 +12,15 @@ const crawler = (function () {
     title: string;
     depth: number;
     parent: string;
+    toCrawl: boolean;
     children: [];
-    constructor(linkURL, title, depth, parent) {
+    constructor(linkURL, title, depth, parent, toCrawl) {
       this.url = linkURL.replace(/\/+$/g, "");
       this.title = title;
       this.depth = depth;
       this.parent = parent;
       this.children = [];
+      this.toCrawl = toCrawl;
     }
   }
 
@@ -35,6 +37,7 @@ const crawler = (function () {
       maxCrawlingPages: 15,
       mainDomain: null,
       mainParsedUrl: null,
+      browser: null,
       ws: socket,
     };
     try {
@@ -48,37 +51,31 @@ const crawler = (function () {
 
     session.maxCrawlingDepth = maxDepth;
     session.maxCrawlingPages = maxPages;
-    let startLinkObj = new CreateLink(startURL, startURL, 0, null);
+    let startLinkObj = new CreateLink(startURL, startURL, 0, null, true);
     session.rootNode = session.currentNode = startLinkObj;
     addToLinkQueue(session.currentNode, session.linksQueue, session);
     await findLinks(session, session.currentNode);
   }
 
-  async function loadContent(url) {
-    const browser = await puppeteer.launch({
-      headless: false,
-      args: [
-        "--disable-features=CrossSiteDocumentBlockingAlways,CrossSiteDocumentBlockingIfIsolating",
-      ],
-    });
-    const page = await browser.newPage();
-    await page.setViewport({ width: 1600, height: 800 });
-    await page.setBypassCSP(true);
-
+  async function loadContent(url, session) {
+    session.browser =
+      session.browser ||
+      (await puppeteer.launch({
+        args: ["--unlimited-storage", "--full-memory-crash-report"],
+      }));
+    const [page] = await session.browser.pages();
     await page.goto(url);
-    let html = await page.content();
-    await browser.close();
-    return html;
+    return await page.content();
   }
 
   //Get the HTML raw text and fetch the links and titles.
   async function findLinks(session, linkObj) {
     let response;
     try {
-      response = await loadContent(linkObj.url);
+      response = await loadContent(linkObj.url, session);
       let $ = cheerio.load(response);
       ++session.crawledCount;
-      let title = $("html").find("title").text();
+      linkObj.title = $("html").find("title").text();
       let links = $("body")
         .find("a")
         .filter(function (i, x) {
@@ -86,28 +83,31 @@ const crawler = (function () {
         })
         .map(function (item, index) {
           let curUrl = $(this).attr("href");
-          if (curUrl.includes(linkObj.url)) return curUrl;
           return !curUrl.includes("http")
-            ? `${linkObj.url.replace(/\/+$/g, "")}/${curUrl}`
-            : null;
+            ? `${linkObj.url.replace(/\/+$/g, "")}/${curUrl.replace(
+                /(^\/+|\/+$)/gm,
+                ""
+              )}`
+            : curUrl;
         });
       if (links.length > 0) {
         links
           .filter((item, index) => links[index] !== item)
-          .map(function (i, x) {
-            let reqLink = checkDomain(x, session);
+          .map(function (i, reqLink) {
             if (reqLink && reqLink != linkObj.url) {
               let newLinkObj = new CreateLink(
                 reqLink,
-                title,
+                linkObj.title,
                 linkObj.depth + 1,
-                linkObj
+                linkObj,
+                reqLink.indexOf(session.mainDomain) > -1
               );
               addToLinkQueue(newLinkObj, session.linksQueue, session);
             }
           });
       } else {
         console.log("No more links found");
+        closeSession(session);
       }
       let nextLinkObj = getNextInQueue(session);
       if (
@@ -118,11 +118,23 @@ const crawler = (function () {
         //next url
         await findLinks(session, nextLinkObj);
       } else {
+        console.log("Session is closed...");
+        closeSession(session);
         setRootNode(session);
       }
     } catch (err) {
       console.log("Something Went Wrong...", err);
+      closeSession(session);
     }
+  }
+
+  function closeSession(session) {
+    let crawlRes = JSON.stringify({
+      crawl_res: true,
+    });
+    session.ws.send(crawlRes);
+    session.browser.close();
+    session.browser = null;
   }
 
   //Set the index of RootNode to the parent node
@@ -131,42 +143,6 @@ const crawler = (function () {
       session.currentNode = session.currentNode.parent;
     }
     session.rootNode = session.currentNode;
-  }
-
-  //Check if the domain is a part of the root site
-  function checkDomain(linkURL, session) {
-    let parsedUrl;
-    let fullUrl = true;
-    try {
-      parsedUrl = new URL(linkURL);
-    } catch (error) {
-      fullUrl = false;
-    }
-    if (fullUrl === false) {
-      if (linkURL.indexOf("/") === 0) {
-        //relative to domain url
-        return (
-          session.mainParsedUrl.protocol +
-          "/" +
-          session.mainParsedUrl.hostname +
-          linkURL.split("#")[0]
-        );
-      } else if (linkURL.indexOf("#") === 0) {
-        return;
-      } else {
-        //relative url
-        let path = session.currentNode.url.match(".*/")[0];
-        return path + linkURL;
-      }
-    }
-    let mainHostDomain = parsedUrl.hostname;
-
-    if (session.mainDomain == mainHostDomain) {
-      parsedUrl.hash = "";
-      return parsedUrl.href;
-    } else {
-      return;
-    }
   }
 
   function addToLinkQueue(linkobj, linksQueue, session) {
@@ -207,6 +183,10 @@ const crawler = (function () {
 
   function getNextInQueue(session) {
     let nextLink = session.linksQueue.shift();
+    while (nextLink && !nextLink.toCrawl) {
+      nextLink = session.linksQueue.shift();
+    }
+
     if (nextLink && nextLink.depth > session.previousDepth) {
       session.previousDepth = nextLink.depth;
       let crawlDepth = JSON.stringify({

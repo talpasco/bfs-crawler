@@ -15,7 +15,11 @@
       "preLaunchTask": null,
       "runtimeExecutable": null,
       "runtimeArgs": [
-        "--nolazy"
+        "--nolazy",
+        "--max-old-space-size=8192",
+        "--optimize-for-size",
+        "--max_old_space_size=8192",
+        "--optimize_for_size"
       ],
       "externalConsole": false,
       "sourceMaps": false,
@@ -27,7 +31,11 @@
       "name": "Launch Program",
       "runtimeArgs": [
         "-r",
-        "ts-node/register"
+        "ts-node/register",
+        "--max-old-space-size=8192",
+        "--optimize-for-size",
+        "--max_old_space_size=8192",
+        "--optimize_for_size"
       ],
       "args": [
         "${workspaceFolder}/src/appendMetadata.ts"
@@ -40,7 +48,11 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": [
         "run-script",
-        "test"
+        "test",
+        "--max-old-space-size=8192",
+        "--optimize-for-size",
+        "--max_old_space_size=8192",
+        "--optimize_for_size"
       ],
       "port": 9229,
       "skipFiles": [

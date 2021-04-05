@@ -16,7 +16,8 @@
                     <div class="search-group">
                         <input type="text" class="form-control" name="search" id="search" placeholder="search"
                             v-model="query">
-                        <span class="glyphicon glyphicon-search form-control-feedback" @click="search()"></span>
+                        <span id="searchIcon" class="glyphicon glyphicon-search form-control-feedback"
+                            @click="search()"></span>
                     </div>
                     <br>
                     <div class="search-group">
@@ -42,7 +43,8 @@
     <div id="resultView">
         <ul v-for="result in results">
             <li>
-                <tree-menu :nodes="result.children" :depth="0" :label="result.url + ' (' + result.title + ')'"></tree-menu>
+                <tree-menu :nodes="result.children" :depth="0" :label="result.url + ' (' + result.title + ')'">
+                </tree-menu>
             </li>
         </ul>
     </div>
@@ -116,6 +118,35 @@
         margin-top: 2em;
         width: 100%;
     }
+
+    .glyphicon.fast-right-spinner {
+        -webkit-animation: glyphicon-spin-r 1s infinite linear;
+        animation: glyphicon-spin-r 1s infinite linear;
+    }
+
+    @-webkit-keyframes glyphicon-spin-r {
+        0% {
+            -webkit-transform: rotate(0deg);
+            transform: rotate(0deg);
+        }
+
+        100% {
+            -webkit-transform: rotate(359deg);
+            transform: rotate(359deg);
+        }
+    }
+
+    @keyframes glyphicon-spin-r {
+        0% {
+            -webkit-transform: rotate(0deg);
+            transform: rotate(0deg);
+        }
+
+        100% {
+            -webkit-transform: rotate(359deg);
+            transform: rotate(359deg);
+        }
+    }
 </style>
 <script>
     Vue.component('tree-menu', {
@@ -162,6 +193,7 @@
         methods: {
             // make an axios request to the server with the current search query
             search: function () {
+                document.getElementById("searchIcon").className = "glyphicon glyphicon-repeat fast-right-spinner";
                 let vm = this;
                 if (!this.updateReport) {
                     this.results = [];
@@ -174,9 +206,11 @@
                                 curDepth = res.depth;
                             }
                             vm.populateTree(vm.results, res);
+                            document.getElementById("searchIcon").className = "glyphicon glyphicon-search form-control-feedback";
                         })
                     }).catch(error => {
                         document.getElementById('resultView').innerHTML = `<div class='resHeader'> ------------- No results, please check 'Update-Query' checkbox -------------</div>`;
+                        document.getElementById("searchIcon").className = "glyphicon glyphicon-search form-control-feedback";
                     })
                 }
                 else {
@@ -219,6 +253,9 @@
                     let res = JSON.parse(event.data);
                     if (res.crawling_depth) {
                         document.getElementById('resultView').innerHTML += `<div class='resHeader'> ------------------------------ CRAWLING DEPTH (${res.crawling_depth}) ------------------------------ </div>`;
+                    }
+                    else if (res.crawl_res) {
+                        document.getElementById("searchIcon").className = "glyphicon glyphicon-search form-control-feedback";
                     }
                     else {
                         vm.populateTree(vm.results, res);
