@@ -18,8 +18,8 @@
 
 ## Get Code
 
-* Clone or download this [repository](https://bitbucket.org/talpasco/bfs-crawler)
-    * `git clone https://bitbucket.org/talpasco/bfs-crawler` 
+* Clone or download this [repository](https://github.com/talpasco/bfs-crawler)
+    * `git clone https://github.com/talpasco/bfs-crawler` 
 * `cd bfs-crawler` - move into directory just created
 * `npm install` to install dependencies
 
